@@ -5,7 +5,6 @@ import com.example.jwt.dto.ReqRes;
 import com.example.jwt.service.UsersManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,9 +24,14 @@ public class UsersManagementController {
         return ResponseEntity.ok(usersManagementService.login(req));
     }
 
-    @GetMapping("/auth/refresh-token")
-    public ResponseEntity<ReqRes> userList(@RequestBody ReqRes refreshToken){
+    @PostMapping("/auth/refresh-token")
+    public ResponseEntity<ReqRes> refreshToken(@RequestBody ReqRes refreshToken){
         return ResponseEntity.ok(usersManagementService.refreshToken(refreshToken));
+    }
+
+    @PostMapping("/auth/logout")
+    public ResponseEntity<ReqRes> logout(@RequestBody ReqRes req) {
+        return ResponseEntity.ok(usersManagementService.logout(req));
     }
 
 }

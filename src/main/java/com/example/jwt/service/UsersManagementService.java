@@ -1,14 +1,18 @@
 package com.example.jwt.service;
 
 import com.example.jwt.dto.ReqRes;
+import com.example.jwt.entity.BlacklistedToken;
 import com.example.jwt.entity.Users;
+import com.example.jwt.repository.BlacklistedTokenRepository;
 import com.example.jwt.repository.UsersRepo;
+import io.jsonwebtoken.ExpiredJwtException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
 import java.util.HashMap;
 
 @Service
@@ -25,6 +29,9 @@ public class UsersManagementService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private BlacklistedTokenRepository blacklistedTokenRepository;
 
 
     public ReqRes register(ReqRes registrationRequest) {
@@ -80,33 +87,73 @@ public class UsersManagementService {
 
     public ReqRes refreshToken(ReqRes refreshTokenRequest) {
         ReqRes response = new ReqRes();
+        System.out.println("getToken: " + refreshTokenRequest.getToken());
 
         try{
-           String email = jwtUtils.extractUsername(refreshTokenRequest.getToken());
-           Users user = usersRepo.findByEmail(email).orElseThrow();
+            String email = jwtUtils.extractUsername(refreshTokenRequest.getToken());
+            Users user = usersRepo.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
-           if(jwtUtils.isTokenValid(refreshTokenRequest.getToken(), user)){
-               var jwt=jwtUtils.generateToken(user);
+            if (jwtUtils.isTokenValid(refreshTokenRequest.getToken(), user)) {
+                String newAccessToken = jwtUtils.generateToken(user);
+                String newRefreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
-               response.setStatusCode(200);
-               response.setToken(jwt);
-               response.setRole(user.getRole());
-               response.setRefreshToken(refreshTokenRequest.getToken());
-               response.setMessage("Successfully Refreshed Token");
-
-           }
-            response.setStatusCode(200);
-            return response;
-
-        }catch (Exception e){
+                response.setStatusCode(200);
+                response.setToken(newAccessToken);
+                response.setRefreshToken(newRefreshToken);
+                response.setRole(user.getRole());
+                response.setMessage("Successfully Refreshed Token");
+            } else {
+                response.setStatusCode(401);
+                response.setMessage("Invalid or expired refresh token.");
+            }
+        } catch (ExpiredJwtException e) {
+            response.setStatusCode(401);
+            response.setMessage("Refresh token has expired. Please log in again.");
+        } catch (Exception e) {
             response.setStatusCode(500);
-            response.setMessage(e.getMessage());
-            return response;
+            response.setMessage("Internal server error: " + e.getMessage());
         }
+
+        return response;
     }
 
-    public String logout(ReqRes logoutRequest) {
-        return "logout successfu";
-  }
+    public ReqRes logout(ReqRes logoutRequest) {
+        ReqRes response = new ReqRes();
+        try{
+        String token = logoutRequest.getToken();
+        String refreshToken = logoutRequest.getRefreshToken();
+
+        if(!blacklistedTokenRepository.existsByToken(token) && !blacklistedTokenRepository.existsByToken(refreshToken)){
+            Date tokenExp = jwtUtils.extractExpiration(token);
+            BlacklistedToken access = new BlacklistedToken();
+            access.setType("access token");
+            access.setToken(token);
+            access.setExpiration(tokenExp);
+            blacklistedTokenRepository.save(access);
+
+            Date refreshExp = jwtUtils.extractExpiration(refreshToken);
+            BlacklistedToken refresh = new BlacklistedToken();
+            refresh.setType("refresh token");
+            refresh.setToken(refreshToken);
+            refresh.setExpiration(refreshExp);
+            blacklistedTokenRepository.save(refresh);
+
+            response.setStatusCode(200);
+            response.setMessage("Successfully Logout!");
+
+        }else{
+            response.setStatusCode(401);
+            response.setMessage("You Already logged Out!");
+        }
+            return response;
+        } catch (Exception e) {
+            response.setStatusCode(500);
+            response.setMessage("Internal server error: " + e.getMessage());
+            return response;
+     }
+
+   }
+
 
 }
