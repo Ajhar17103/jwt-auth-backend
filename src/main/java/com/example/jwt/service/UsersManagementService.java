@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 
 @Service
 public class UsersManagementService {
@@ -155,5 +156,20 @@ public class UsersManagementService {
 
    }
 
-
+    public ReqRes getAllUser() {
+        ReqRes response = new ReqRes();
+        try {
+            List<Users> users = usersRepo.findAll();
+            if (!users.isEmpty()){
+                response.setUsersList(users);
+            }
+            response.setStatusCode(200);
+            response.setMessage("All Users Successfully");
+            return response;
+        } catch (Exception e) {
+            response.setStatusCode(500);
+            response.setMessage("Internal server error: " + e.getMessage());
+            return response;
+        }
+    }
 }

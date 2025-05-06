@@ -5,6 +5,7 @@ import com.example.jwt.dto.ReqRes;
 import com.example.jwt.service.UsersManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,6 +33,11 @@ public class UsersManagementController {
     @PostMapping("/auth/logout")
     public ResponseEntity<ReqRes> logout(@RequestBody ReqRes req) {
         return ResponseEntity.ok(usersManagementService.logout(req));
+    }
+
+    @GetMapping("/user/user-list")
+    public ResponseEntity<ReqRes> userList(){
+        return ResponseEntity.ok(usersManagementService.getAllUser());
     }
 
 }
