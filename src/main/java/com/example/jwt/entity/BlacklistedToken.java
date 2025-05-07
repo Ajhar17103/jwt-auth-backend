@@ -20,4 +20,3 @@ public class BlacklistedToken {
     private Date expiration;
 
 }
-

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UsersManagementService {
@@ -40,10 +41,16 @@ public class UsersManagementService {
 
 
     public Response register(Request registrationRequest) {
-        Response resp = new Response();
 
         try{
-           Users user = new Users();
+            Optional <Users> existingUser = usersRepo.findByEmail(registrationRequest.getEmail());
+            if (existingUser.isPresent()) {
+                return Response.builder()
+                        .statusCode(409)
+                        .message("Email already exists!")
+                        .build();
+            }
+            Users user = new Users();
 
            user.setEmail(registrationRequest.getEmail());
            user.setName(registrationRequest.getName());
@@ -53,48 +60,55 @@ public class UsersManagementService {
 
            Users userResult = usersRepo.save(user);
 
-           if(userResult.getId()>0){
-               resp.setUsers(userResult);
-               resp.setMessage("User Saved Successfully");
-               resp.setStatusCode(200);
-           }
+            if (userResult.getId() > 0) {
+                return Response.builder()
+                        .statusCode(200)
+                        .message("User Saved Successfully")
+                        .users(userResult)
+                        .build();
+            } else {
+                return Response.builder()
+                        .statusCode(500)
+                        .message("User could not be saved")
+                        .build();
+            }
 
+        } catch (Exception e) {
+            return Response.builder()
+                    .statusCode(500)
+                    .message("Exception occurred: " + e.getMessage())
+                    .build();
         }
-        catch (Exception e){
-            resp.setStatusCode(500);
-            resp.setMessage(e.getMessage());
-        }
-        return resp;
     }
 
     public Response login(Request loginRequest) {
-        Response response = new Response();
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+            );
 
-        try{
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
             var user = usersRepo.findByEmail(loginRequest.getEmail()).orElseThrow();
-            var jwt  = jwtUtils.generateToken(user);
+            var jwt = jwtUtils.generateToken(user);
             var refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
-            response.setStatusCode(200);
-            response.setToken(jwt);
-            response.setRole(user.getRole());
-            response.setRefreshToken(refreshToken);
-            response.setMessage("User Login Successfully");
+            return Response.builder()
+                    .statusCode(200)
+                    .token(jwt)
+                    .refreshToken(refreshToken)
+                    .role(user.getRole())
+                    .message("User Login Successfully")
+                    .build();
 
-        }catch (Exception e){
-            response.setStatusCode(500);
-            response.setMessage(e.getMessage());
-
+        } catch (Exception e) {
+            return Response.builder()
+                    .statusCode(500)
+                    .message(e.getMessage())
+                    .build();
         }
-        return response;
     }
 
     public Response refreshToken(Response refreshTokenRequest) {
-        Response response = new Response();
-        System.out.println("getToken: " + refreshTokenRequest.getToken());
-
-        try{
+        try {
             String email = jwtUtils.extractUsername(refreshTokenRequest.getToken());
             Users user = usersRepo.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
@@ -103,77 +117,88 @@ public class UsersManagementService {
                 String newAccessToken = jwtUtils.generateToken(user);
                 String newRefreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
-                response.setStatusCode(200);
-                response.setToken(newAccessToken);
-                response.setRefreshToken(newRefreshToken);
-                response.setRole(user.getRole());
-                response.setMessage("Successfully Refreshed Token");
+                return Response.builder()
+                        .statusCode(200)
+                        .token(newAccessToken)
+                        .refreshToken(newRefreshToken)
+                        .role(user.getRole())
+                        .message("Successfully Refreshed Token")
+                        .build();
             } else {
-                response.setStatusCode(401);
-                response.setMessage("Invalid or expired refresh token.");
+                return Response.builder()
+                        .statusCode(401)
+                        .message("Invalid or expired refresh token.")
+                        .build();
             }
-        } catch (ExpiredJwtException e) {
-            response.setStatusCode(401);
-            response.setMessage("Refresh token has expired. Please log in again.");
-        } catch (Exception e) {
-            response.setStatusCode(500);
-            response.setMessage("Internal server error: " + e.getMessage());
-        }
 
-        return response;
+        } catch (ExpiredJwtException e) {
+            return Response.builder()
+                    .statusCode(401)
+                    .message("Refresh token has expired. Please log in again.")
+                    .build();
+        } catch (Exception e) {
+            return Response.builder()
+                    .statusCode(500)
+                    .message("Internal server error: " + e.getMessage())
+                    .build();
+        }
     }
 
     public Response logout(Response logoutRequest) {
-        Response response = new Response();
+
         try{
-        String token = logoutRequest.getToken();
-        String refreshToken = logoutRequest.getRefreshToken();
+            String token = logoutRequest.getToken();
+            String refreshToken = logoutRequest.getRefreshToken();
 
-        if(!blacklistedTokenRepository.existsByToken(token) && !blacklistedTokenRepository.existsByToken(refreshToken)){
-            Date tokenExp = jwtUtils.extractExpiration(token);
-            BlacklistedToken access = new BlacklistedToken();
-            access.setType("access token");
-            access.setToken(token);
-            access.setExpiration(tokenExp);
-            blacklistedTokenRepository.save(access);
+            if(!blacklistedTokenRepository.existsByToken(token) && !blacklistedTokenRepository.existsByToken(refreshToken)){
+                Date tokenExp = jwtUtils.extractExpiration(token);
+                BlacklistedToken access = new BlacklistedToken();
+                access.setType("access token");
+                access.setToken(token);
+                access.setExpiration(tokenExp);
+                blacklistedTokenRepository.save(access);
 
-            Date refreshExp = jwtUtils.extractExpiration(refreshToken);
-            BlacklistedToken refresh = new BlacklistedToken();
-            refresh.setType("refresh token");
-            refresh.setToken(refreshToken);
-            refresh.setExpiration(refreshExp);
-            blacklistedTokenRepository.save(refresh);
+                Date refreshExp = jwtUtils.extractExpiration(refreshToken);
+                BlacklistedToken refresh = new BlacklistedToken();
+                refresh.setType("refresh token");
+                refresh.setToken(refreshToken);
+                refresh.setExpiration(refreshExp);
+                blacklistedTokenRepository.save(refresh);
 
-            response.setStatusCode(200);
-            response.setMessage("Successfully Logout!");
+                return Response.builder()
+                                .statusCode(200)
+                                .message("Successfully Logout!")
+                                .build();
+            }else{
+                return Response.builder()
+                        .statusCode(401)
+                        .message("You Already logged Out!")
+                        .build();
+            }
 
-        }else{
-            response.setStatusCode(401);
-            response.setMessage("You Already logged Out!");
-        }
-            return response;
         } catch (Exception e) {
-            response.setStatusCode(500);
-            response.setMessage("Internal server error: " + e.getMessage());
-            return response;
-     }
-
-   }
+            return Response.builder()
+                    .statusCode(401)
+                    .message("Internal server error: " + e.getMessage())
+                    .build();
+        }
+    }
 
     public Response getAllUser() {
-        Response response = new Response();
         try {
             List<Users> users = usersRepo.findAll();
-            if (!users.isEmpty()){
-                response.setUsersList(users);
-            }
-            response.setStatusCode(200);
-            response.setMessage("All Users Successfully");
-            return response;
+
+            return Response.builder()
+                    .statusCode(200)
+                    .message("All Users Successfully")
+                    .usersList(users)
+                    .build();
+
         } catch (Exception e) {
-            response.setStatusCode(500);
-            response.setMessage("Internal server error: " + e.getMessage());
-            return response;
+            return Response.builder()
+                    .statusCode(500)
+                    .message("Internal server error: " + e.getMessage())
+                    .build();
         }
     }
 }
