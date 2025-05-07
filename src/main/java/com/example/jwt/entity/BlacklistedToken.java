@@ -6,7 +6,6 @@ import lombok.Data;
 import java.util.Date;
 
 @Entity
-@Table(name = "blacklistedtoken")
 @Data
 public class BlacklistedToken {
 

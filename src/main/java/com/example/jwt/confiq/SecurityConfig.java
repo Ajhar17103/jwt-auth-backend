@@ -1,7 +1,6 @@
 package com.example.jwt.confiq;
 
 import com.example.jwt.service.UsersDetailService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,13 +20,16 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfiq {
+public class SecurityConfig {
 
-    @Autowired
-    private UsersDetailService usersDetailService;
 
-    @Autowired
-    private JWTAuthFilter jwtAuthFilter;
+    private final UsersDetailService usersDetailService;
+    private final JWTAuthFilter jwtAuthFilter;
+
+    public SecurityConfig(UsersDetailService usersDetailService, JWTAuthFilter jwtAuthFilter) {
+        this.usersDetailService = usersDetailService;
+        this.jwtAuthFilter = jwtAuthFilter;
+    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception{

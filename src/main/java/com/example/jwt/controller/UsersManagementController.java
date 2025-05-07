@@ -1,42 +1,46 @@
 package com.example.jwt.controller;
 
 
-import com.example.jwt.dto.ReqRes;
+import com.example.jwt.dto.Response;
+import com.example.jwt.params.Request;
 import com.example.jwt.service.UsersManagementService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-public class UsersManagementController {
-    @Autowired
-    private UsersManagementService usersManagementService;
+public class UsersManagementController extends BaseController {
+
+    private final UsersManagementService usersManagementService;
+
+    public UsersManagementController(UsersManagementService usersManagementService) {
+        this.usersManagementService = usersManagementService;
+    }
 
     @PostMapping("/auth/register")
-    public ResponseEntity<ReqRes> register(@RequestBody ReqRes req) {
-        return ResponseEntity.ok(usersManagementService.register(req));
+    public ResponseEntity<Response> register(@Valid @RequestBody Request RegisterRequest) {
+        Response response =usersManagementService.register(RegisterRequest);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/auth/login")
-    public ResponseEntity<ReqRes> login(@RequestBody ReqRes req){
-        return ResponseEntity.ok(usersManagementService.login(req));
+    public ResponseEntity<Response> login(@RequestBody Request loginRequest){
+        Response response = usersManagementService.login(loginRequest);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/auth/refresh-token")
-    public ResponseEntity<ReqRes> refreshToken(@RequestBody ReqRes refreshToken){
+    public ResponseEntity<Response> refreshToken(@RequestBody Response refreshToken){
         return ResponseEntity.ok(usersManagementService.refreshToken(refreshToken));
     }
 
     @PostMapping("/auth/logout")
-    public ResponseEntity<ReqRes> logout(@RequestBody ReqRes req) {
+    public ResponseEntity<Response> logout(@RequestBody Response req) {
         return ResponseEntity.ok(usersManagementService.logout(req));
     }
 
     @GetMapping("/user/user-list")
-    public ResponseEntity<ReqRes> userList(){
+    public ResponseEntity<Response> userList(){
         return ResponseEntity.ok(usersManagementService.getAllUser());
     }
 

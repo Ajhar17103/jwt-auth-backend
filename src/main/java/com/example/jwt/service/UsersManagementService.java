@@ -1,12 +1,12 @@
 package com.example.jwt.service;
 
-import com.example.jwt.dto.ReqRes;
+import com.example.jwt.dto.Response;
 import com.example.jwt.entity.BlacklistedToken;
 import com.example.jwt.entity.Users;
+import com.example.jwt.params.Request;
 import com.example.jwt.repository.BlacklistedTokenRepository;
 import com.example.jwt.repository.UsersRepo;
 import io.jsonwebtoken.ExpiredJwtException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,24 +19,28 @@ import java.util.List;
 @Service
 public class UsersManagementService {
 
-    @Autowired
-    private UsersRepo usersRepo;
 
-    @Autowired
-    private JWTUtils jwtUtils;
+    private final UsersRepo usersRepo;
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+    private final JWTUtils jwtUtils;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
 
-    @Autowired
-    private BlacklistedTokenRepository blacklistedTokenRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    private final BlacklistedTokenRepository blacklistedTokenRepository;
+
+    public UsersManagementService(UsersRepo usersRepo, JWTUtils jwtUtils, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder, BlacklistedTokenRepository blacklistedTokenRepository) {
+        this.usersRepo = usersRepo;
+        this.jwtUtils = jwtUtils;
+        this.authenticationManager = authenticationManager;
+        this.passwordEncoder = passwordEncoder;
+        this.blacklistedTokenRepository = blacklistedTokenRepository;
+    }
 
 
-    public ReqRes register(ReqRes registrationRequest) {
-        ReqRes resp = new ReqRes();
+    public Response register(Request registrationRequest) {
+        Response resp = new Response();
 
         try{
            Users user = new Users();
@@ -63,8 +67,8 @@ public class UsersManagementService {
         return resp;
     }
 
-    public ReqRes login(ReqRes loginRequest) {
-        ReqRes response = new ReqRes();
+    public Response login(Request loginRequest) {
+        Response response = new Response();
 
         try{
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
@@ -86,8 +90,8 @@ public class UsersManagementService {
         return response;
     }
 
-    public ReqRes refreshToken(ReqRes refreshTokenRequest) {
-        ReqRes response = new ReqRes();
+    public Response refreshToken(Response refreshTokenRequest) {
+        Response response = new Response();
         System.out.println("getToken: " + refreshTokenRequest.getToken());
 
         try{
@@ -119,8 +123,8 @@ public class UsersManagementService {
         return response;
     }
 
-    public ReqRes logout(ReqRes logoutRequest) {
-        ReqRes response = new ReqRes();
+    public Response logout(Response logoutRequest) {
+        Response response = new Response();
         try{
         String token = logoutRequest.getToken();
         String refreshToken = logoutRequest.getRefreshToken();
@@ -156,8 +160,8 @@ public class UsersManagementService {
 
    }
 
-    public ReqRes getAllUser() {
-        ReqRes response = new ReqRes();
+    public Response getAllUser() {
+        Response response = new Response();
         try {
             List<Users> users = usersRepo.findAll();
             if (!users.isEmpty()){

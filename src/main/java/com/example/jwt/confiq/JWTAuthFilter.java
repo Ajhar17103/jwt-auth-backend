@@ -2,12 +2,10 @@ package com.example.jwt.confiq;
 
 import com.example.jwt.service.JWTUtils;
 import com.example.jwt.service.UsersDetailService;
-import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,13 +19,16 @@ import java.io.IOException;
 @Component
 public class JWTAuthFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JWTUtils jwtUtils;
 
-    @Autowired
-    private UsersDetailService usersDetailService;
-    @Autowired
-    private JWTUtils jWTUtils;
+    private final JWTUtils jwtUtils;
+    private final UsersDetailService usersDetailService;
+    private final JWTUtils jWTUtils;
+
+    public JWTAuthFilter(JWTUtils jwtUtils, UsersDetailService usersDetailService, JWTUtils jWTUtils) {
+        this.jwtUtils = jwtUtils;
+        this.usersDetailService = usersDetailService;
+        this.jWTUtils = jWTUtils;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {

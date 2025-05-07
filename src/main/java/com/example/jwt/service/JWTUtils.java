@@ -17,7 +17,7 @@ import java.util.function.Function;
 @Component
 public class JWTUtils {
     private final BlacklistedTokenRepository blacklistedTokenRepository;
-    private SecretKey Key;
+    private final SecretKey Key;
     private static final long EXPIRATION_TIME = 45 * 60 * 1000;
 
     public JWTUtils(BlacklistedTokenRepository blacklistedTokenRepository) {
