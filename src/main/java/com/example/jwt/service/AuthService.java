@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class UsersManagementService {
+public class AuthService {
 
 
     private final UsersRepo usersRepo;
@@ -31,7 +31,7 @@ public class UsersManagementService {
 
     private final BlacklistedTokenRepository blacklistedTokenRepository;
 
-    public UsersManagementService(UsersRepo usersRepo, JWTUtils jwtUtils, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder, BlacklistedTokenRepository blacklistedTokenRepository) {
+    public AuthService(UsersRepo usersRepo, JWTUtils jwtUtils, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder, BlacklistedTokenRepository blacklistedTokenRepository) {
         this.usersRepo = usersRepo;
         this.jwtUtils = jwtUtils;
         this.authenticationManager = authenticationManager;
@@ -55,12 +55,12 @@ public class UsersManagementService {
            user.setEmail(registrationRequest.getEmail());
            user.setName(registrationRequest.getName());
            user.setRole(registrationRequest.getRole());
-           user.setCity(registrationRequest.getCity());
            user.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
 
            Users userResult = usersRepo.save(user);
 
             if (userResult.getId() > 0) {
+                System.out.println(userResult);
                 return Response.builder()
                         .statusCode(200)
                         .message("User Saved Successfully")
@@ -179,24 +179,6 @@ public class UsersManagementService {
         } catch (Exception e) {
             return Response.builder()
                     .statusCode(401)
-                    .message("Internal server error: " + e.getMessage())
-                    .build();
-        }
-    }
-
-    public Response getAllUser() {
-        try {
-            List<Users> users = usersRepo.findAll();
-
-            return Response.builder()
-                    .statusCode(200)
-                    .message("All Users Successfully")
-                    .usersList(users)
-                    .build();
-
-        } catch (Exception e) {
-            return Response.builder()
-                    .statusCode(500)
                     .message("Internal server error: " + e.getMessage())
                     .build();
         }
