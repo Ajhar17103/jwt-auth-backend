@@ -9,39 +9,35 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-public class UsersManagementController extends BaseController {
+@RequestMapping("/auth")
+public class AuthController extends BaseController {
 
     private final UsersManagementService usersManagementService;
 
-    public UsersManagementController(UsersManagementService usersManagementService) {
+    public AuthController(UsersManagementService usersManagementService) {
         this.usersManagementService = usersManagementService;
     }
 
-    @PostMapping("/auth/register")
+    @PostMapping("/register")
     public ResponseEntity<Response> register(@Valid @RequestBody Request RegisterRequest) {
         Response response =usersManagementService.register(RegisterRequest);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/auth/login")
+    @PostMapping("/login")
     public ResponseEntity<Response> login(@RequestBody Request loginRequest){
         Response response = usersManagementService.login(loginRequest);
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/auth/refresh-token")
-    public ResponseEntity<Response> refreshToken(@RequestBody Response refreshToken){
+    @PostMapping("/refresh-token")
+    public ResponseEntity<Response> refreshToken(@Valid @RequestBody Response refreshToken){
         return ResponseEntity.ok(usersManagementService.refreshToken(refreshToken));
     }
 
-    @PostMapping("/auth/logout")
+    @PostMapping("/logout")
     public ResponseEntity<Response> logout(@RequestBody Response req) {
         return ResponseEntity.ok(usersManagementService.logout(req));
-    }
-
-    @GetMapping("/user/user-list")
-    public ResponseEntity<Response> userList(){
-        return ResponseEntity.ok(usersManagementService.getAllUser());
     }
 
 }
