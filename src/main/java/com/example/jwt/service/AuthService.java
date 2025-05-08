@@ -1,9 +1,12 @@
 package com.example.jwt.service;
 
-import com.example.jwt.dto.Response;
+import com.example.jwt.dto.*;
+import com.example.jwt.params.LogoutRequestParams;
+import com.example.jwt.params.RefreshTokenRequestParams;
 import com.example.jwt.entity.BlacklistedToken;
 import com.example.jwt.entity.Users;
-import com.example.jwt.params.Request;
+import com.example.jwt.params.LoginRequestParams;
+import com.example.jwt.params.RegisterRequestParams;
 import com.example.jwt.repository.BlacklistedTokenRepository;
 import com.example.jwt.repository.UsersRepo;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -14,7 +17,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -40,12 +42,12 @@ public class AuthService {
     }
 
 
-    public Response register(Request registrationRequest) {
+    public ApiResponse<RegisterResponseDto> register(RegisterRequestParams registrationRequest) {
 
         try{
             Optional <Users> existingUser = usersRepo.findByEmail(registrationRequest.getEmail());
             if (existingUser.isPresent()) {
-                return Response.builder()
+                return ApiResponse.<RegisterResponseDto>builder()
                         .statusCode(409)
                         .message("Email already exists!")
                         .build();
@@ -56,95 +58,120 @@ public class AuthService {
            user.setName(registrationRequest.getName());
            user.setRole(registrationRequest.getRole());
            user.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
-
+           user.setActive(true);
+           user.setIsDeleted(0);
            Users userResult = usersRepo.save(user);
 
             if (userResult.getId() > 0) {
                 System.out.println(userResult);
-                return Response.builder()
+                RegisterResponseDto registerRes = RegisterResponseDto.builder()
+                        .name(userResult.getName())
+                        .email(userResult.getEmail())
+                        .role(userResult.getRole())
+                        .isActive(userResult.isActive())
+                        .isDeleted(userResult.getIsDeleted())
+                        .build();
+
+                return ApiResponse.<RegisterResponseDto>builder()
                         .statusCode(200)
                         .message("User Saved Successfully")
-                        .users(userResult)
+                        .data(registerRes)
                         .build();
             } else {
-                return Response.builder()
+                return ApiResponse.<RegisterResponseDto>builder()
                         .statusCode(500)
                         .message("User could not be saved")
                         .build();
             }
 
         } catch (Exception e) {
-            return Response.builder()
+            return ApiResponse.<RegisterResponseDto>builder()
                     .statusCode(500)
                     .message("Exception occurred: " + e.getMessage())
                     .build();
         }
     }
 
-    public Response login(Request loginRequest) {
+    public ApiResponse<LoginResponseDto> login(LoginRequestParams loginRequest) {
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
+                    )
             );
 
-            var user = usersRepo.findByEmail(loginRequest.getEmail()).orElseThrow();
-            var jwt = jwtUtils.generateToken(user);
-            var refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
+            Users user = usersRepo.findByEmail(loginRequest.getEmail()).orElseThrow();
 
-            return Response.builder()
-                    .statusCode(200)
+            String jwt = jwtUtils.generateToken(user);
+            String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
+
+            LoginResponseDto responseData = LoginResponseDto.builder()
                     .token(jwt)
                     .refreshToken(refreshToken)
                     .role(user.getRole())
-                    .message("User Login Successfully")
+                    .isActive(user.isActive())
+                    .isDeleted(user.getIsDeleted())
+                    .build();
+
+            return ApiResponse.<LoginResponseDto>builder()
+                    .statusCode(200)
+                    .message("User login successful")
+                    .data(responseData)
                     .build();
 
         } catch (Exception e) {
-            return Response.builder()
+            return ApiResponse.<LoginResponseDto>builder()
                     .statusCode(500)
-                    .message(e.getMessage())
+                    .message("Login failed: " + e.getMessage())
                     .build();
         }
     }
 
-    public Response refreshToken(Response refreshTokenRequest) {
+    public ApiResponse<TokenResponseDto> refreshToken(RefreshTokenRequestParams refreshTokenRequest) {
         try {
-            String email = jwtUtils.extractUsername(refreshTokenRequest.getToken());
+            String refreshToken = refreshTokenRequest.getRefreshToken();
+            String email = jwtUtils.extractUsername(refreshToken);
             Users user = usersRepo.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
 
-            if (jwtUtils.isTokenValid(refreshTokenRequest.getToken(), user)) {
+            if (jwtUtils.isTokenValid(refreshToken, user)) {
                 String newAccessToken = jwtUtils.generateToken(user);
                 String newRefreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
-                return Response.builder()
-                        .statusCode(200)
+                TokenResponseDto tokenResponse = TokenResponseDto.builder()
                         .token(newAccessToken)
                         .refreshToken(newRefreshToken)
                         .role(user.getRole())
+                        .build();
+
+                return ApiResponse.<TokenResponseDto>builder()
+                        .statusCode(200)
                         .message("Successfully Refreshed Token")
+                        .data(tokenResponse)
                         .build();
             } else {
-                return Response.builder()
+                return ApiResponse.<TokenResponseDto>builder()
                         .statusCode(401)
                         .message("Invalid or expired refresh token.")
                         .build();
             }
 
         } catch (ExpiredJwtException e) {
-            return Response.builder()
+            return ApiResponse.<TokenResponseDto>builder()
                     .statusCode(401)
                     .message("Refresh token has expired. Please log in again.")
                     .build();
         } catch (Exception e) {
-            return Response.builder()
+            return ApiResponse.<TokenResponseDto>builder()
                     .statusCode(500)
                     .message("Internal server error: " + e.getMessage())
                     .build();
         }
     }
 
-    public Response logout(Response logoutRequest) {
+
+    public ApiResponse<Void> logout(LogoutRequestParams logoutRequest) {
 
         try{
             String token = logoutRequest.getToken();
@@ -165,19 +192,19 @@ public class AuthService {
                 refresh.setExpiration(refreshExp);
                 blacklistedTokenRepository.save(refresh);
 
-                return Response.builder()
+                return ApiResponse.<Void>builder()
                                 .statusCode(200)
                                 .message("Successfully Logout!")
                                 .build();
             }else{
-                return Response.builder()
+                return ApiResponse.<Void>builder()
                         .statusCode(401)
                         .message("You Already logged Out!")
                         .build();
             }
 
         } catch (Exception e) {
-            return Response.builder()
+            return ApiResponse.<Void>builder()
                     .statusCode(401)
                     .message("Internal server error: " + e.getMessage())
                     .build();

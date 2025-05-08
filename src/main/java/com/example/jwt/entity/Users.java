@@ -21,7 +21,8 @@ public class Users implements UserDetails {
     private String name;
     private String email;
     private String password;
-
+    private boolean isActive;
+    private int isDeleted;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -31,5 +32,25 @@ public class Users implements UserDetails {
     @Override
     public String getUsername() {
         return email;
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return isActive;
     }
 }

@@ -8,26 +8,15 @@ import lombok.Data;
 
 import java.util.List;
 
+
 @Data
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Response {
-
-    private int statusCode;
-    private String error;
-    private String message;
-    private String token;
-    private String refreshToken;
-    private String expirationTime;
-
+public class RegisterResponseDto {
     private String name;
     private String email;
     private String role;
-    private String password;
-//    private boolean isActive;
-//    private int isDeleted;
-
-    private Users users;
-    private List<Users> usersList;
+    private boolean isActive;
+    private int isDeleted;
 }

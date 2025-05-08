@@ -12,7 +12,7 @@ import lombok.Data;
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Request {
+public class RegisterRequestParams {
 
     @NotBlank(message = "Name is required")
     private String name;
@@ -32,7 +32,4 @@ public class Request {
     )
     private String password;
 
-    private boolean isActive;
-
-    private int isDeleted;
 }

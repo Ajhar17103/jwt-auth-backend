@@ -1,8 +1,11 @@
 package com.example.jwt.controller;
 
 
-import com.example.jwt.dto.Response;
-import com.example.jwt.params.Request;
+import com.example.jwt.dto.*;
+import com.example.jwt.params.LogoutRequestParams;
+import com.example.jwt.params.RefreshTokenRequestParams;
+import com.example.jwt.params.LoginRequestParams;
+import com.example.jwt.params.RegisterRequestParams;
 import com.example.jwt.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -19,25 +22,28 @@ public class AuthController extends BaseController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Response> register(@Valid @RequestBody Request RegisterRequest) {
-        Response response = authService.register(RegisterRequest);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ApiResponse<RegisterResponseDto>> register(@Valid @RequestBody RegisterRequestParams registerRequest) {
+        ApiResponse<RegisterResponseDto> registerRes = authService.register(registerRequest);
+        return buildResponse(registerRes);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Response> login(@RequestBody Request loginRequest){
-        Response response = authService.login(loginRequest);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ApiResponse<LoginResponseDto>> login(@Valid @RequestBody LoginRequestParams loginRequest){
+        ApiResponse <LoginResponseDto> response = authService.login(loginRequest);
+        return buildResponse(response);
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<Response> refreshToken(@RequestBody Response refreshToken){
-        return ResponseEntity.ok(authService.refreshToken(refreshToken));
+    public ResponseEntity<ApiResponse<TokenResponseDto>> refreshToken(@Valid @RequestBody RefreshTokenRequestParams request) {
+        ApiResponse<TokenResponseDto> response = authService.refreshToken(request);
+        return buildResponse(response);
     }
 
+
     @PostMapping("/logout")
-    public ResponseEntity<Response> logout(@RequestBody Response req) {
-        return ResponseEntity.ok(authService.logout(req));
+    public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody LogoutRequestParams req) {
+        ApiResponse<Void> response=authService.logout(req);
+        return buildResponse(response);
     }
 
 }
