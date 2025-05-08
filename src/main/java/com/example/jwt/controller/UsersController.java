@@ -1,15 +1,18 @@
 package com.example.jwt.controller;
 
-import com.example.jwt.dto.Response;
-import com.example.jwt.params.Request;
+import com.example.jwt.dto.ApiResponse;
+import com.example.jwt.dto.UserResponseDto;
+import com.example.jwt.params.UserUpdateRequestParams;
 import com.example.jwt.service.UsersService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/user")
-public class UsersController {
+public class UsersController extends BaseController{
     private final UsersService usersService;
 
     public UsersController(UsersService usersService) {
@@ -17,20 +20,27 @@ public class UsersController {
     }
 
     @GetMapping("/user-lists")
-    public ResponseEntity<Response> userList(){
-        return ResponseEntity.ok(usersService.getAllUser());
+    public ResponseEntity<ApiResponse<List<UserResponseDto>>> userList() {
+        ApiResponse<List<UserResponseDto>> userDetails = usersService.getAllUser();
+        return buildResponse(userDetails);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Response> userById(@PathVariable int id) {
-        Response userDetails = usersService.userDetails(id);
-        return ResponseEntity.ok(userDetails);
+    public ResponseEntity<ApiResponse<UserResponseDto>> userById(@PathVariable int id) {
+        ApiResponse<UserResponseDto> userDetails = usersService.userDetails(id);
+        return buildResponse(userDetails);
     }
 
     @PutMapping("/update/{id}")
-    public ResponseEntity<Response> updateUser(@Valid @PathVariable int id, @RequestBody Request users) {
-       Response user = usersService.updateUser(id, users);
-       return ResponseEntity.ok(user);
+    public ResponseEntity<ApiResponse<UserResponseDto>> updateUser(@Valid @PathVariable int id, @RequestBody UserUpdateRequestParams users) {
+        ApiResponse<UserResponseDto> user = usersService.updateUser(id, users);
+       return buildResponse(user);
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<ApiResponse<UserResponseDto>> deleteUser(@PathVariable int id) {
+        ApiResponse<UserResponseDto> response = usersService.deleteUser(id);
+        return buildResponse(response);
     }
 
 }

@@ -21,13 +21,13 @@ public class AuthController extends BaseController {
         this.authService = authService;
     }
 
-    @PostMapping("/register")
+    @PostMapping("/public/register")
     public ResponseEntity<ApiResponse<RegisterResponseDto>> register(@Valid @RequestBody RegisterRequestParams registerRequest) {
         ApiResponse<RegisterResponseDto> registerRes = authService.register(registerRequest);
         return buildResponse(registerRes);
     }
 
-    @PostMapping("/login")
+    @PostMapping("/public/login")
     public ResponseEntity<ApiResponse<LoginResponseDto>> login(@Valid @RequestBody LoginRequestParams loginRequest){
         ApiResponse <LoginResponseDto> response = authService.login(loginRequest);
         return buildResponse(response);

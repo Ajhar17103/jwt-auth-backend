@@ -12,14 +12,11 @@ import lombok.Data;
 @Data
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Request {
+public class UserUpdateRequestParams {
 
     @NotBlank(message = "Name is required")
     private String name;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email format is invalid")
-    private String email;
 
     @NotBlank(message = "Role is required")
     private String role;
@@ -33,6 +30,4 @@ public class Request {
     private String password;
 
     private boolean isActive;
-
-    private int isDeleted;
 }
