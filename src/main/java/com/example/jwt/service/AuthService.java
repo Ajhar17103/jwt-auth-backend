@@ -9,15 +9,29 @@ import com.example.jwt.params.LoginRequestParams;
 import com.example.jwt.params.RegisterRequestParams;
 import com.example.jwt.repository.BlacklistedTokenRepository;
 import com.example.jwt.repository.UsersRepo;
+import com.example.jwt.utils.ExcelUtils;
+import com.example.jwt.utils.JWTUtils;
 import io.jsonwebtoken.ExpiredJwtException;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Optional;
+import java.io.FileOutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+
+import static com.example.jwt.utils.ExcelUtils.createSheet;
+import static com.example.jwt.utils.ExcelUtils.getCellValue;
+import static com.example.jwt.utils.ValidationUtils.isValidEmail;
+import static com.example.jwt.utils.ValidationUtils.isValidPassword;
 
 @Service
 public class AuthService {
@@ -40,6 +54,7 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.blacklistedTokenRepository = blacklistedTokenRepository;
     }
+
 
 
     public ApiResponse<RegisterResponseDto> register(RegisterRequestParams registrationRequest) {
@@ -210,4 +225,105 @@ public class AuthService {
                     .build();
         }
     }
+
+    public ApiResponse<BulkRegisterResponseDto> registerUsersInBatchAndSaveReport(MultipartFile file) {
+        List<String[]> resultRows = new ArrayList<>();
+
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            int batchSize = 1000;
+            List<Users> batch = new ArrayList<>(batchSize);
+
+            Set<String> existingEmails = usersRepo.findAllEmails();
+            int successCount = 0;
+            int failureCount = 0;
+
+            for (Row row : sheet) {
+                if (row.getRowNum() == 0) continue;
+
+                String name = getCellValue(row.getCell(0));
+                String email = getCellValue(row.getCell(1));
+                String role = getCellValue(row.getCell(2));
+                String password = getCellValue(row.getCell(3));
+
+                try {
+                    StringBuilder errorMessage = new StringBuilder();
+
+                    if (existingEmails.contains(email)) {
+                        failureCount++;
+                        errorMessage.append("Duplicate email; ");
+                    }
+
+                    if (!isValidPassword(password)) {
+                        failureCount++;
+                        errorMessage.append("Invalid password format; ");
+                    }
+
+                    if (!isValidEmail(email)) {
+                        failureCount++;
+                        errorMessage.append("Invalid email format; ");
+                    }
+                    if (!errorMessage.isEmpty()) {
+                        resultRows.add(new String[]{name, email, role, "Failed", errorMessage.toString()});
+                        continue;
+                    }
+                    Users user = new Users();
+                    user.setName(name);
+                    user.setEmail(email);
+                    user.setRole(role);
+                    user.setPassword(passwordEncoder.encode(password));
+                    user.setActive(true);
+                    user.setIsDeleted(0);
+
+                    batch.add(user);
+                    existingEmails.add(email);
+                    resultRows.add(new String[]{name, email, role, "Success", ""});
+                    successCount++;
+
+                    if (batch.size() == batchSize) {
+                        usersRepo.saveAll(batch);
+                        batch.clear();
+                    }
+
+                } catch (Exception e) {
+                    failureCount++;
+                    resultRows.add(new String[]{name, email, role, "Failed", "Error: " + e.getMessage()});
+                }
+            }
+
+            if (!batch.isEmpty()) {
+                usersRepo.saveAll(batch);
+            }
+
+            Workbook resultWorkbook = new XSSFWorkbook();
+           createSheet(resultWorkbook, "Registration Report",
+                    new String[]{"Name", "Email", "Role", "Status", "Remarks"}, resultRows);
+
+            String filename = "bulk-register-report-" + System.currentTimeMillis() + ".xlsx";
+            Path path = Paths.get(System.getProperty("java.io.tmpdir"), filename);
+            try (FileOutputStream fos = new FileOutputStream(path.toFile())) {
+                resultWorkbook.write(fos);
+            }
+            resultWorkbook.close();
+
+            BulkRegisterResponseDto dto = BulkRegisterResponseDto.builder()
+                    .successCount(successCount)
+                    .failureCount(failureCount)
+                    .reportDownloadUrl(filename)
+                    .build();
+
+            return ApiResponse.<BulkRegisterResponseDto>builder()
+                    .statusCode(200)
+                    .message("Bulk registration completed.")
+                    .data(dto)
+                    .build();
+
+        } catch (Exception e) {
+            return ApiResponse.<BulkRegisterResponseDto>builder()
+                    .statusCode(500)
+                    .message("Internal server error: " + e.getMessage())
+                    .build();
+        }
+    }
+
 }

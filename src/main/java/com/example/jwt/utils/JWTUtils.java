@@ -1,4 +1,4 @@
-package com.example.jwt.service;
+package com.example.jwt.utils;
 
 import com.example.jwt.repository.BlacklistedTokenRepository;
 import io.jsonwebtoken.Claims;

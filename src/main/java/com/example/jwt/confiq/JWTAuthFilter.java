@@ -1,6 +1,6 @@
 package com.example.jwt.confiq;
 
-import com.example.jwt.service.JWTUtils;
+import com.example.jwt.utils.JWTUtils;
 import com.example.jwt.service.UsersDetailService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
