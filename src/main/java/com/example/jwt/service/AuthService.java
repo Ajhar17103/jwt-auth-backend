@@ -1,5 +1,9 @@
 package com.example.jwt.service;
 
+import java.io.FileOutputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 import com.example.jwt.dto.*;
 import com.example.jwt.params.LogoutRequestParams;
 import com.example.jwt.params.RefreshTokenRequestParams;
@@ -9,10 +13,8 @@ import com.example.jwt.params.LoginRequestParams;
 import com.example.jwt.params.RegisterRequestParams;
 import com.example.jwt.repository.BlacklistedTokenRepository;
 import com.example.jwt.repository.UsersRepo;
-import com.example.jwt.utils.ExcelUtils;
 import com.example.jwt.utils.JWTUtils;
 import io.jsonwebtoken.ExpiredJwtException;
-import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -22,12 +24,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.FileOutputStream;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-
 import static com.example.jwt.utils.ExcelUtils.createSheet;
 import static com.example.jwt.utils.ExcelUtils.getCellValue;
 import static com.example.jwt.utils.ValidationUtils.isValidEmail;

@@ -67,8 +67,6 @@ public class JWTUtils {
                     .getPayload();
             return claimsResolver.apply(claims);
         } catch (ExpiredJwtException e) {
-            System.out.println("JWT expired for subject: " + e.getClaims().getSubject()
-                    + " at " + e.getClaims().getExpiration());
             throw e;
         } catch (JwtException e) {
             throw new RuntimeException("Invalid JWT token", e);

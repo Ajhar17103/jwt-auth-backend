@@ -62,7 +62,6 @@ public class UsersService {
             if (users.isPresent()) {
                 Users userInfo = users.get();
 
-                // Check if the user is marked as deleted
                 if (userInfo.getIsDeleted() == 1) {
                     return ApiResponse.<UserResponseDto>builder()
                             .statusCode(400) // Bad request (invalid action)
@@ -70,7 +69,6 @@ public class UsersService {
                             .build();
                 }
 
-                // Proceed if user is not deleted
                 UserResponseDto responseData = UserResponseDto.builder()
                         .id(userInfo.getId())
                         .email(userInfo.getEmail())
@@ -112,15 +110,12 @@ public class UsersService {
 
             Users userToUpdate = userOptional.get();
 
-            // Check if the user is marked as deleted
             if (userToUpdate.getIsDeleted() == 1) {
                 return ApiResponse.<UserResponseDto>builder()
-                        .statusCode(400) // Bad request (invalid action)
+                        .statusCode(400)
                         .message("User is deleted and cannot be updated")
                         .build();
             }
-
-            // Update fields if the user is not deleted
             userToUpdate.setName(users.getName());
             userToUpdate.setRole(users.getRole());
             userToUpdate.setActive(users.isActive());
@@ -131,7 +126,6 @@ public class UsersService {
 
             Users updatedUser = usersRepo.save(userToUpdate);
 
-            // Build response DTO
             UserResponseDto responseDto = UserResponseDto.builder()
                     .id(updatedUser.getId())
                     .email(updatedUser.getEmail())
