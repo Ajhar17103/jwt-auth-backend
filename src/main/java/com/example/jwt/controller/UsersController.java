@@ -5,6 +5,7 @@ import com.example.jwt.dto.UserResponseDto;
 import com.example.jwt.params.UserUpdateRequestParams;
 import com.example.jwt.service.UsersService;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +16,7 @@ import java.util.List;
 public class UsersController extends BaseController{
     private final UsersService usersService;
 
+    @Autowired
     public UsersController(UsersService usersService) {
         this.usersService = usersService;
     }

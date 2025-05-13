@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: Admin@123
+      MYSQL_DATABASE: jwt
+    ports:
+      - "3306:3306"
+    networks:
+      - jwt-network
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+networks:
+  jwt-network:
+
+volumes:
+  mysql-data:
