@@ -74,7 +74,6 @@ public class AuthService {
            Users userResult = usersRepo.save(user);
 
             if (userResult.getId() > 0) {
-                System.out.println(userResult);
                 RegisterResponseDto registerRes = RegisterResponseDto.builder()
                         .name(userResult.getName())
                         .email(userResult.getEmail())

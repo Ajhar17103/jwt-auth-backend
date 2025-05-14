@@ -1,5 +1,6 @@
 package com.example.jwt.utils;
 
+import com.example.jwt.confiq.JwtProperties;
 import com.example.jwt.repository.BlacklistedTokenRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -20,18 +21,17 @@ import java.util.function.Function;
 public class JWTUtils {
 
     private final BlacklistedTokenRepository blacklistedTokenRepository;
+    private final JwtProperties jwtProperties;
     private SecretKey key;
 
-    private static final long EXPIRATION_TIME = 45 * 60 * 1000; // 45 minutes
-
-    public JWTUtils(BlacklistedTokenRepository blacklistedTokenRepository) {
+    public JWTUtils(BlacklistedTokenRepository blacklistedTokenRepository,JwtProperties jwtProperties) {
         this.blacklistedTokenRepository = blacklistedTokenRepository;
+        this.jwtProperties = jwtProperties;
         initializeKey();
     }
 
     private void initializeKey() {
-        String secretString = "843567893696976453275974432697R634976R738467TR678T34865R6834R8763T478378637664538745673865783678548735687R3";
-        byte[] keyBytes = Base64.getDecoder().decode(secretString.getBytes(StandardCharsets.UTF_8));
+        byte[] keyBytes = Base64.getDecoder().decode(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
         this.key = new SecretKeySpec(keyBytes, "HmacSHA256");
     }
 
@@ -39,7 +39,7 @@ public class JWTUtils {
         return Jwts.builder()
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationTime()))
                 .signWith(key)
                 .compact();
     }
@@ -49,7 +49,7 @@ public class JWTUtils {
                 .claims(claims)
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
-                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationTime()))
                 .signWith(key)
                 .compact();
     }
