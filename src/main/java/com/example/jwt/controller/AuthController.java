@@ -2,6 +2,8 @@ package com.example.jwt.controller;
 
 
 import com.example.jwt.dto.*;
+import com.example.jwt.exception.DatabaseException;
+import com.example.jwt.exception.EmailAlreadyExistsException;
 import com.example.jwt.params.LogoutRequestParams;
 import com.example.jwt.params.RefreshTokenRequestParams;
 import com.example.jwt.params.LoginRequestParams;
@@ -12,6 +14,7 @@ import org.springframework.core.io.Resource;
 import jakarta.validation.Valid;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,9 +36,10 @@ public class AuthController extends BaseController {
 
     @PostMapping("/public/register")
     public ResponseEntity<ApiResponse<RegisterResponseDto>> register(@Valid @RequestBody RegisterRequestParams registerRequest) {
-        ApiResponse<RegisterResponseDto> registerRes = authService.register(registerRequest);
-        return buildResponse(registerRes);
+            ApiResponse<RegisterResponseDto> registerRes = authService.register(registerRequest);
+            return buildResponse(registerRes);
     }
+
 
     @PostMapping("/public/bulk-register")
     public ResponseEntity<ApiResponse<BulkRegisterResponseDto>> bulkRegister(@RequestParam("file") MultipartFile file) {

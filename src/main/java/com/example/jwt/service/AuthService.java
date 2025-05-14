@@ -5,6 +5,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import com.example.jwt.dto.*;
+import com.example.jwt.exception.DatabaseException;
+import com.example.jwt.exception.EmailAlreadyExistsException;
+import com.example.jwt.exception.InactiveUserException;
+import com.example.jwt.exception.InvalidCredentialsException;
 import com.example.jwt.params.LogoutRequestParams;
 import com.example.jwt.params.RefreshTokenRequestParams;
 import com.example.jwt.entity.BlacklistedToken;
@@ -15,12 +19,15 @@ import com.example.jwt.repository.BlacklistedTokenRepository;
 import com.example.jwt.repository.UsersRepo;
 import com.example.jwt.utils.JWTUtils;
 import io.jsonwebtoken.ExpiredJwtException;
+import jakarta.persistence.EntityNotFoundException;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -51,58 +58,42 @@ public class AuthService {
         this.blacklistedTokenRepository = blacklistedTokenRepository;
     }
 
-
-
     public ApiResponse<RegisterResponseDto> register(RegisterRequestParams registrationRequest) {
-
-        try{
-            Optional <Users> existingUser = usersRepo.findByEmail(registrationRequest.getEmail());
-            if (existingUser.isPresent()) {
-                return ApiResponse.<RegisterResponseDto>builder()
-                        .statusCode(409)
-                        .message("Email already exists!")
-                        .build();
-            }
-            Users user = new Users();
-
-           user.setEmail(registrationRequest.getEmail());
-           user.setName(registrationRequest.getName());
-           user.setRole(registrationRequest.getRole());
-           user.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
-           user.setActive(true);
-           user.setIsDeleted(0);
-           Users userResult = usersRepo.save(user);
-
-            if (userResult.getId() > 0) {
-                RegisterResponseDto registerRes = RegisterResponseDto.builder()
-                        .name(userResult.getName())
-                        .email(userResult.getEmail())
-                        .role(userResult.getRole())
-                        .isActive(userResult.isActive())
-                        .isDeleted(userResult.getIsDeleted())
-                        .build();
-
-                return ApiResponse.<RegisterResponseDto>builder()
-                        .statusCode(200)
-                        .message("User Saved Successfully")
-                        .data(registerRes)
-                        .build();
-            } else {
-                return ApiResponse.<RegisterResponseDto>builder()
-                        .statusCode(500)
-                        .message("User could not be saved")
-                        .build();
-            }
-
-        } catch (Exception e) {
-            return ApiResponse.<RegisterResponseDto>builder()
-                    .statusCode(500)
-                    .message("Exception occurred: " + e.getMessage())
-                    .build();
+        Optional<Users> existingUser = usersRepo.findByEmail(registrationRequest.getEmail());
+        if (existingUser.isPresent()) {
+            throw new EmailAlreadyExistsException("Email already exists!");
         }
+        Users user = new Users();
+        user.setEmail(registrationRequest.getEmail());
+        user.setName(registrationRequest.getName());
+        user.setRole(registrationRequest.getRole());
+        user.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
+        user.setActive(true);
+        user.setIsDeleted(0);
+
+        Users savedUser = usersRepo.save(user);
+
+        if (savedUser.getId() <= 0) {
+            throw new DatabaseException("User could not be saved");
+        }
+
+        RegisterResponseDto responseDto = RegisterResponseDto.builder()
+                .name(savedUser.getName())
+                .email(savedUser.getEmail())
+                .role(savedUser.getRole())
+                .isActive(savedUser.isActive())
+                .isDeleted(savedUser.getIsDeleted())
+                .build();
+
+        return ApiResponse.<RegisterResponseDto>builder()
+                .statusCode(HttpStatus.OK.value())
+                .message("User Saved Successfully")
+                .data(responseDto)
+                .build();
     }
 
     public ApiResponse<LoginResponseDto> login(LoginRequestParams loginRequest) {
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
@@ -110,32 +101,33 @@ public class AuthService {
                             loginRequest.getPassword()
                     )
             );
-
-            Users user = usersRepo.findByEmail(loginRequest.getEmail()).orElseThrow();
-
-            String jwt = jwtUtils.generateToken(user);
-            String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
-
-            LoginResponseDto responseData = LoginResponseDto.builder()
-                    .token(jwt)
-                    .refreshToken(refreshToken)
-                    .role(user.getRole())
-                    .isActive(user.isActive())
-                    .isDeleted(user.getIsDeleted())
-                    .build();
-
-            return ApiResponse.<LoginResponseDto>builder()
-                    .statusCode(200)
-                    .message("User login successful")
-                    .data(responseData)
-                    .build();
-
-        } catch (Exception e) {
-            return ApiResponse.<LoginResponseDto>builder()
-                    .statusCode(500)
-                    .message("Login failed: " + e.getMessage())
-                    .build();
+        } catch (AuthenticationException ex) {
+            throw new InvalidCredentialsException("Invalid email or password");
         }
+
+        Users user = usersRepo.findByEmail(loginRequest.getEmail())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        System.out.println(user.isActive());
+        if (!user.isActive()) {
+            throw new InactiveUserException("Your account is deactivated. Please contact support.");
+        }
+
+        String jwt = jwtUtils.generateToken(user);
+        String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
+
+        LoginResponseDto responseData = LoginResponseDto.builder()
+                .token(jwt)
+                .refreshToken(refreshToken)
+                .role(user.getRole())
+                .isActive(user.isActive())
+                .isDeleted(user.getIsDeleted())
+                .build();
+
+        return ApiResponse.<LoginResponseDto>builder()
+                .statusCode(HttpStatus.OK.value())
+                .message("User login successful")
+                .data(responseData)
+                .build();
     }
 
     public ApiResponse<TokenResponseDto> refreshToken(RefreshTokenRequestParams refreshTokenRequest) {
