@@ -1,5 +1,6 @@
 package com.example.jwt.params;
 
+import com.example.jwt.annotation.UniqueEmail;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.Email;
@@ -19,6 +20,7 @@ public class RegisterRequestParams {
 
     @NotBlank(message = "Email is required")
     @Email(message = "Email format is invalid")
+    @UniqueEmail
     private String email;
 
     @NotBlank(message = "Role is required")

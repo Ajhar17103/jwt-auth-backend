@@ -4,6 +4,7 @@ import com.example.jwt.dto.ApiResponse;
 import com.example.jwt.dto.UserResponseDto;
 import com.example.jwt.params.UserUpdateRequestParams;
 import com.example.jwt.service.UsersService;
+import com.example.jwt.utils.url.UrlUserPaths;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping(UrlUserPaths.BASE)
 public class UsersController extends BaseController{
     private final UsersService usersService;
 
@@ -21,25 +22,25 @@ public class UsersController extends BaseController{
         this.usersService = usersService;
     }
 
-    @GetMapping("/user-lists")
+    @GetMapping(UrlUserPaths.USER_LIST)
     public ResponseEntity<ApiResponse<List<UserResponseDto>>> userList() {
         ApiResponse<List<UserResponseDto>> userDetails = usersService.getAllUser();
         return buildResponse(userDetails);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(UrlUserPaths.BY_ID)
     public ResponseEntity<ApiResponse<UserResponseDto>> userById(@PathVariable int id) {
         ApiResponse<UserResponseDto> userDetails = usersService.userDetails(id);
         return buildResponse(userDetails);
     }
 
-    @PutMapping("/update/{id}")
+    @PutMapping(UrlUserPaths.UPDATE)
     public ResponseEntity<ApiResponse<UserResponseDto>> updateUser(@Valid @PathVariable int id, @RequestBody UserUpdateRequestParams users) {
         ApiResponse<UserResponseDto> user = usersService.updateUser(id, users);
        return buildResponse(user);
     }
 
-    @DeleteMapping("/delete/{id}")
+    @DeleteMapping(UrlUserPaths.DELETE)
     public ResponseEntity<ApiResponse<UserResponseDto>> deleteUser(@PathVariable int id) {
         ApiResponse<UserResponseDto> response = usersService.deleteUser(id);
         return buildResponse(response);

@@ -2,19 +2,18 @@ package com.example.jwt.controller;
 
 
 import com.example.jwt.dto.*;
-import com.example.jwt.exception.DatabaseException;
-import com.example.jwt.exception.EmailAlreadyExistsException;
 import com.example.jwt.params.LogoutRequestParams;
 import com.example.jwt.params.RefreshTokenRequestParams;
 import com.example.jwt.params.LoginRequestParams;
 import com.example.jwt.params.RegisterRequestParams;
 import com.example.jwt.service.AuthService;
 import java.io.IOException;
+
+import com.example.jwt.utils.url.UrlAuthPaths;
 import org.springframework.core.io.Resource;
 import jakarta.validation.Valid;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping(UrlAuthPaths.BASE)
 public class AuthController extends BaseController {
 
     private final AuthService authService;
@@ -34,20 +33,20 @@ public class AuthController extends BaseController {
         this.authService = authService;
     }
 
-    @PostMapping("/public/register")
+    @PostMapping(UrlAuthPaths.REGISTER)
     public ResponseEntity<ApiResponse<RegisterResponseDto>> register(@Valid @RequestBody RegisterRequestParams registerRequest) {
             ApiResponse<RegisterResponseDto> registerRes = authService.register(registerRequest);
             return buildResponse(registerRes);
     }
 
 
-    @PostMapping("/public/bulk-register")
+    @PostMapping(UrlAuthPaths.BULK_REGISTER)
     public ResponseEntity<ApiResponse<BulkRegisterResponseDto>> bulkRegister(@RequestParam("file") MultipartFile file) {
         ApiResponse<BulkRegisterResponseDto> reportInfo = authService.registerUsersInBatchAndSaveReport(file);
         return buildResponse(reportInfo);
     }
 
-    @GetMapping("/public/bulk-register-report/{filename}")
+    @GetMapping(UrlAuthPaths.BULK_REGISTER_REPORT)
     public ResponseEntity<Resource> downloadReport(@PathVariable String filename) throws IOException {
         Path path = Paths.get(System.getProperty("java.io.tmpdir"), filename);
 
@@ -64,20 +63,20 @@ public class AuthController extends BaseController {
                 .body(resource);
     }
 
-    @PostMapping("/public/login")
+    @PostMapping(UrlAuthPaths.LOGIN)
     public ResponseEntity<ApiResponse<LoginResponseDto>> login(@Valid @RequestBody LoginRequestParams loginRequest){
         ApiResponse <LoginResponseDto> response = authService.login(loginRequest);
         return buildResponse(response);
     }
 
-    @PostMapping("/refresh-token")
+    @PostMapping(UrlAuthPaths.REFRESH_TOKEN)
     public ResponseEntity<ApiResponse<TokenResponseDto>> refreshToken(@Valid @RequestBody RefreshTokenRequestParams request) {
         ApiResponse<TokenResponseDto> response = authService.refreshToken(request);
         return buildResponse(response);
     }
 
 
-    @PostMapping("/logout")
+    @PostMapping(UrlAuthPaths.LOGOUT)
     public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody LogoutRequestParams req) {
         ApiResponse<Void> response=authService.logout(req);
         return buildResponse(response);
