@@ -21,8 +21,9 @@ public class Users implements UserDetails {
     private String name;
     private String email;
     private String password;
-    private boolean isActive;
-    private int isDeleted;
+    private boolean active;
+    private int is_deleted;
+
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -32,6 +33,10 @@ public class Users implements UserDetails {
     @Override
     public String getUsername() {
         return email;
+    }
+
+    public boolean getActive() {
+        return active;
     }
 
     @Override
@@ -51,6 +56,7 @@ public class Users implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return isActive;
+        return active;
     }
+
 }

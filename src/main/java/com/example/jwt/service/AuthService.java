@@ -9,6 +9,8 @@ import com.example.jwt.exception.DatabaseException;
 import com.example.jwt.exception.EmailAlreadyExistsException;
 import com.example.jwt.exception.InactiveUserException;
 import com.example.jwt.exception.InvalidCredentialsException;
+import com.example.jwt.mapper.LoginMapper;
+import com.example.jwt.mapper.RegisterMapper;
 import com.example.jwt.params.LogoutRequestParams;
 import com.example.jwt.params.RefreshTokenRequestParams;
 import com.example.jwt.entity.BlacklistedToken;
@@ -24,6 +26,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -50,12 +53,19 @@ public class AuthService {
 
     private final BlacklistedTokenRepository blacklistedTokenRepository;
 
-    public AuthService(UsersRepo usersRepo, JWTUtils jwtUtils, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder, BlacklistedTokenRepository blacklistedTokenRepository) {
+    private final RegisterMapper registerMapper;
+
+    private  final LoginMapper loginMapper;
+
+    @Autowired
+    public AuthService(UsersRepo usersRepo, JWTUtils jwtUtils, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder, BlacklistedTokenRepository blacklistedTokenRepository, RegisterMapper registerMapper, LoginMapper loginMapper) {
         this.usersRepo = usersRepo;
         this.jwtUtils = jwtUtils;
         this.authenticationManager = authenticationManager;
         this.passwordEncoder = passwordEncoder;
         this.blacklistedTokenRepository = blacklistedTokenRepository;
+        this.registerMapper = registerMapper;
+        this.loginMapper = loginMapper;
     }
 
     public ApiResponse<RegisterResponseDto> register(RegisterRequestParams registrationRequest) {
@@ -63,13 +73,10 @@ public class AuthService {
         if (existingUser.isPresent()) {
             throw new EmailAlreadyExistsException("Email already exists!");
         }
-        Users user = new Users();
-        user.setEmail(registrationRequest.getEmail());
-        user.setName(registrationRequest.getName());
-        user.setRole(registrationRequest.getRole());
+        Users user = registerMapper.toUser(registrationRequest);
         user.setPassword(passwordEncoder.encode(registrationRequest.getPassword()));
         user.setActive(true);
-        user.setIsDeleted(0);
+        user.setIs_deleted(0);
 
         Users savedUser = usersRepo.save(user);
 
@@ -77,13 +84,7 @@ public class AuthService {
             throw new DatabaseException("User could not be saved");
         }
 
-        RegisterResponseDto responseDto = RegisterResponseDto.builder()
-                .name(savedUser.getName())
-                .email(savedUser.getEmail())
-                .role(savedUser.getRole())
-                .isActive(savedUser.isActive())
-                .isDeleted(savedUser.getIsDeleted())
-                .build();
+        RegisterResponseDto responseDto = registerMapper.toResponseDto(savedUser);
 
         return ApiResponse.<RegisterResponseDto>builder()
                 .statusCode(HttpStatus.OK.value())
@@ -107,21 +108,16 @@ public class AuthService {
 
         Users user = usersRepo.findByEmail(loginRequest.getEmail())
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        System.out.println(user.isActive());
-        if (!user.isActive()) {
+        if (!user.getActive()) {
             throw new InactiveUserException("Your account is deactivated. Please contact support.");
         }
 
         String jwt = jwtUtils.generateToken(user);
         String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
-        LoginResponseDto responseData = LoginResponseDto.builder()
-                .token(jwt)
-                .refreshToken(refreshToken)
-                .role(user.getRole())
-                .isActive(user.isActive())
-                .isDeleted(user.getIsDeleted())
-                .build();
+        LoginResponseDto responseData = loginMapper.toResponseDto(user);
+        responseData.setToken(jwt);
+        responseData.setRefreshToken(refreshToken);
 
         return ApiResponse.<LoginResponseDto>builder()
                 .statusCode(HttpStatus.OK.value())
@@ -260,7 +256,7 @@ public class AuthService {
                     user.setRole(role);
                     user.setPassword(passwordEncoder.encode(password));
                     user.setActive(true);
-                    user.setIsDeleted(0);
+                    user.setIs_deleted(0);
 
                     batch.add(user);
                     existingEmails.add(email);

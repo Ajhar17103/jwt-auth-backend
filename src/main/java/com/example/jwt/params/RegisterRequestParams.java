@@ -20,7 +20,6 @@ public class RegisterRequestParams {
 
     @NotBlank(message = "Email is required")
     @Email(message = "Email format is invalid")
-    @UniqueEmail
     private String email;
 
     @NotBlank(message = "Role is required")

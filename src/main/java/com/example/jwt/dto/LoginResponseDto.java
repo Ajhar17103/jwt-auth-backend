@@ -9,6 +9,6 @@ public class LoginResponseDto {
     private String token;
     private String refreshToken;
     private String role;
-    private Boolean isActive;
-    private int isDeleted;
+    private Boolean active;
+    private int is_deleted;
 }

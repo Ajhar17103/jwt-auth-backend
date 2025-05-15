@@ -16,6 +16,8 @@ public class RegisterResponseDto {
     private String name;
     private String email;
     private String role;
-    private boolean isActive;
-    private int isDeleted;
+    private boolean active;
+    private int is_deleted;
+
+
 }

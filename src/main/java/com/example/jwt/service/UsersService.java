@@ -3,8 +3,10 @@ package com.example.jwt.service;
 import com.example.jwt.dto.ApiResponse;
 import com.example.jwt.dto.UserResponseDto;
 import com.example.jwt.entity.Users;
+import com.example.jwt.mapper.UserDetailsMapper;
 import com.example.jwt.params.UserUpdateRequestParams;
 import com.example.jwt.repository.UsersRepo;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -14,31 +16,26 @@ import java.util.stream.Collectors;
 @Service
 public class UsersService {
 
-
     private final UsersRepo usersRepo;
+
     private final PasswordEncoder passwordEncoder;
 
+    private final UserDetailsMapper userDetailsMapper;
 
-    public UsersService(UsersRepo usersRepo, PasswordEncoder passwordEncoder) {
+
+    @Autowired
+    public UsersService(UsersRepo usersRepo, PasswordEncoder passwordEncoder, UserDetailsMapper userDetailsMapper) {
         this.usersRepo = usersRepo;
         this.passwordEncoder = passwordEncoder;
+        this.userDetailsMapper = userDetailsMapper;
     }
 
     public ApiResponse<List<UserResponseDto>> getAllUser() {
         try {
             List<Users> users = usersRepo.findAll();
 
-
-            List<UserResponseDto> responseData = users.stream()
-                    .filter(user -> user.getIsDeleted() == 0)
-                    .map(user -> UserResponseDto.builder()
-                            .id(user.getId())
-                            .email(user.getEmail())
-                            .name(user.getName())
-                            .role(user.getRole())
-                            .isActive(user.isActive())
-                            .isDeleted(user.getIsDeleted())
-                            .build())
+            List<UserResponseDto> responseData = userDetailsMapper.toResponseListDto(users).stream()
+                    .filter(user -> user.getIs_deleted() == 0)
                     .collect(Collectors.toList());
 
             return ApiResponse.<List<UserResponseDto>>builder()
@@ -62,21 +59,14 @@ public class UsersService {
             if (users.isPresent()) {
                 Users userInfo = users.get();
 
-                if (userInfo.getIsDeleted() == 1) {
+                if (userInfo.getIs_deleted() == 1) {
                     return ApiResponse.<UserResponseDto>builder()
-                            .statusCode(400) // Bad request (invalid action)
+                            .statusCode(400)
                             .message("User is deleted and cannot be updated")
                             .build();
                 }
 
-                UserResponseDto responseData = UserResponseDto.builder()
-                        .id(userInfo.getId())
-                        .email(userInfo.getEmail())
-                        .name(userInfo.getName())
-                        .role(userInfo.getRole())
-                        .isActive(userInfo.isActive())
-                        .isDeleted(userInfo.getIsDeleted())
-                        .build();
+                UserResponseDto responseData = userDetailsMapper.toResponseDto(userInfo);
 
                 return ApiResponse.<UserResponseDto>builder()
                         .statusCode(200)
@@ -110,7 +100,7 @@ public class UsersService {
 
             Users userToUpdate = userOptional.get();
 
-            if (userToUpdate.getIsDeleted() == 1) {
+            if (userToUpdate.getIs_deleted() == 1) {
                 return ApiResponse.<UserResponseDto>builder()
                         .statusCode(400)
                         .message("User is deleted and cannot be updated")
@@ -126,14 +116,7 @@ public class UsersService {
 
             Users updatedUser = usersRepo.save(userToUpdate);
 
-            UserResponseDto responseDto = UserResponseDto.builder()
-                    .id(updatedUser.getId())
-                    .email(updatedUser.getEmail())
-                    .name(updatedUser.getName())
-                    .role(updatedUser.getRole())
-                    .isActive(updatedUser.isActive())
-                    .isDeleted(updatedUser.getIsDeleted())
-                    .build();
+            UserResponseDto responseDto = userDetailsMapper.toResponseDto(updatedUser);
 
             return ApiResponse.<UserResponseDto>builder()
                     .statusCode(200)
@@ -162,24 +145,18 @@ public class UsersService {
 
             Users user = userOptional.get();
 
-            if (user.getIsDeleted() == 1) {
+            if (user.getIs_deleted() == 1) {
                 return ApiResponse.<UserResponseDto>builder()
                         .statusCode(409)
                         .message("User is already deleted")
                         .build();
             }
 
-            user.setIsDeleted(1);
+            user.setIs_deleted(1);
+            user.setActive(false);
             Users deletedUser = usersRepo.save(user);
 
-            UserResponseDto responseDto = UserResponseDto.builder()
-                    .id(deletedUser.getId())
-                    .name(deletedUser.getName())
-                    .email(deletedUser.getEmail())
-                    .role(deletedUser.getRole())
-                    .isActive(deletedUser.isActive())
-                    .isDeleted(deletedUser.getIsDeleted())
-                    .build();
+            UserResponseDto responseDto = userDetailsMapper.toResponseDto(deletedUser);
 
             return ApiResponse.<UserResponseDto>builder()
                     .statusCode(200)
