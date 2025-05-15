@@ -232,20 +232,20 @@ public class AuthService {
                 try {
                     StringBuilder errorMessage = new StringBuilder();
 
-                    if (existingEmails.contains(email)) {
-                        failureCount++;
-                        errorMessage.append("Duplicate email; ");
-                    }
-
-                    if (!isValidPassword(password)) {
-                        failureCount++;
-                        errorMessage.append("Invalid password format; ");
-                    }
-
-                    if (!isValidEmail(email)) {
-                        failureCount++;
-                        errorMessage.append("Invalid email format; ");
-                    }
+//                    if (existingEmails.contains(email)) {
+//                        failureCount++;
+//                        errorMessage.append("Duplicate email; ");
+//                    }
+//
+//                    if (!isValidPassword(password)) {
+//                        failureCount++;
+//                        errorMessage.append("Invalid password format; ");
+//                    }
+//
+//                    if (!isValidEmail(email)) {
+//                        failureCount++;
+//                        errorMessage.append("Invalid email format; ");
+//                    }
                     if (!errorMessage.isEmpty()) {
                         resultRows.add(new String[]{name, email, role, "Failed", errorMessage.toString()});
                         continue;

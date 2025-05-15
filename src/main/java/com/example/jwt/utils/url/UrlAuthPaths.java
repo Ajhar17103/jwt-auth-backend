@@ -6,7 +6,7 @@ public interface UrlAuthPaths {
 
     String   REGISTER                 =  "/register";
     String   BULK_REGISTER            =  "/bulk-register";
-    String   BULK_REGISTER_REPORT     =  "bulk-register-report/{filename}";
+    String   BULK_REGISTER_REPORT     =  "/bulk-register-report/{filename}";
     String   LOGIN                    =  "/login";
     String   REFRESH_TOKEN            =  "/refresh-token";
     String   LOGOUT                   =  "/logout";
