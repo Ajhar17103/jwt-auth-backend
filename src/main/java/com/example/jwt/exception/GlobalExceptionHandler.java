@@ -42,6 +42,11 @@ public class GlobalExceptionHandler extends BaseController {
         return errorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
     }
 
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidationError(ValidationException ex) {
+        return errorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
+    }
+
     @ExceptionHandler(InactiveUserException.class)
     public ResponseEntity<ApiResponse<Void>> handleInactiveUser(InactiveUserException ex) {
         return errorResponse(HttpStatus.FORBIDDEN, ex.getMessage());

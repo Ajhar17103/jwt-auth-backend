@@ -1,6 +1,8 @@
 package com.example.jwt.service;
 
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
@@ -26,6 +28,8 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.batch.core.*;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -36,8 +40,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import static com.example.jwt.utils.ExcelUtils.createSheet;
 import static com.example.jwt.utils.ExcelUtils.getCellValue;
-import static com.example.jwt.utils.ValidationUtils.isValidEmail;
-import static com.example.jwt.utils.ValidationUtils.isValidPassword;
 
 @Service
 public class AuthService {
@@ -57,8 +59,11 @@ public class AuthService {
 
     private  final LoginMapper loginMapper;
 
+    private final JobLauncher jobLauncher;
+    private final Job userImportJob;
+
     @Autowired
-    public AuthService(UsersRepo usersRepo, JWTUtils jwtUtils, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder, BlacklistedTokenRepository blacklistedTokenRepository, RegisterMapper registerMapper, LoginMapper loginMapper) {
+    public AuthService(UsersRepo usersRepo, JWTUtils jwtUtils, AuthenticationManager authenticationManager, PasswordEncoder passwordEncoder, BlacklistedTokenRepository blacklistedTokenRepository, RegisterMapper registerMapper, LoginMapper loginMapper, JobLauncher jobLauncher, Job userImportJob) {
         this.usersRepo = usersRepo;
         this.jwtUtils = jwtUtils;
         this.authenticationManager = authenticationManager;
@@ -66,6 +71,8 @@ public class AuthService {
         this.blacklistedTokenRepository = blacklistedTokenRepository;
         this.registerMapper = registerMapper;
         this.loginMapper = loginMapper;
+        this.jobLauncher = jobLauncher;
+        this.userImportJob = userImportJob;
     }
 
     public ApiResponse<RegisterResponseDto> register(RegisterRequestParams registrationRequest) {
@@ -307,6 +314,31 @@ public class AuthService {
                     .message("Internal server error: " + e.getMessage())
                     .build();
         }
+    }
+
+    public ApiResponse<BulkRegisterResponseDto> launchBatchJob(MultipartFile file) throws IOException, JobExecutionException {
+        String tempFilePath = System.getProperty("java.io.tmpdir") + "/bulk_users_" + System.currentTimeMillis() + ".xlsx";
+        Files.copy(file.getInputStream(), Paths.get(tempFilePath));
+
+        JobParameters parameters = new JobParametersBuilder()
+                .addString("filePath", tempFilePath)
+                .addLong("startAt", System.currentTimeMillis())
+                .toJobParameters();
+
+        JobExecution execution = jobLauncher.run(userImportJob, parameters);
+
+        int success = (int) execution.getStepExecutions().stream().mapToLong(StepExecution::getWriteCount).sum();
+        int failure = (int) execution.getStepExecutions().stream().mapToLong(StepExecution::getSkipCount).sum();
+
+        return ApiResponse.<BulkRegisterResponseDto>builder()
+                .statusCode(200)
+                .message("Batch job completed")
+                .data(BulkRegisterResponseDto.builder()
+                        .successCount(success)
+                        .failureCount(failure)
+                        .reportDownloadUrl("TBD") // implement if you still want to create report
+                        .build())
+                .build();
     }
 
 }

@@ -10,6 +10,7 @@ import com.example.jwt.service.AuthService;
 import java.io.IOException;
 
 import com.example.jwt.utils.url.UrlAuthPaths;
+import org.springframework.batch.core.JobExecutionException;
 import org.springframework.core.io.Resource;
 import jakarta.validation.Valid;
 import org.springframework.core.io.ByteArrayResource;
@@ -40,10 +41,17 @@ public class AuthController extends BaseController {
     }
 
 
+//    @PostMapping(UrlAuthPaths.BULK_REGISTER)
+//    public ResponseEntity<ApiResponse<BulkRegisterResponseDto>> bulkRegister(@RequestParam("file") MultipartFile file) {
+//        ApiResponse<BulkRegisterResponseDto> reportInfo = authService.registerUsersInBatchAndSaveReport(file);
+//        return buildResponse(reportInfo);
+//    }
+
     @PostMapping(UrlAuthPaths.BULK_REGISTER)
-    public ResponseEntity<ApiResponse<BulkRegisterResponseDto>> bulkRegister(@RequestParam("file") MultipartFile file) {
-        ApiResponse<BulkRegisterResponseDto> reportInfo = authService.registerUsersInBatchAndSaveReport(file);
-        return buildResponse(reportInfo);
+    public ResponseEntity<ApiResponse<BulkRegisterResponseDto>> bulkRegister(@RequestParam("file") MultipartFile file) throws JobExecutionException, IOException {
+        System.out.println(file.getOriginalFilename());
+        ApiResponse<BulkRegisterResponseDto> response = authService.launchBatchJob(file);
+        return buildResponse(response);
     }
 
     @GetMapping(UrlAuthPaths.BULK_REGISTER_REPORT)

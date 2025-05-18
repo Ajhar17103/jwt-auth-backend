@@ -1,6 +1,5 @@
 package com.example.jwt.params;
 
-import com.example.jwt.annotation.UniqueEmail;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.Email;
