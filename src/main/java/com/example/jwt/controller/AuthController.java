@@ -40,17 +40,9 @@ public class AuthController extends BaseController {
             return buildResponse(registerRes);
     }
 
-
-//    @PostMapping(UrlAuthPaths.BULK_REGISTER)
-//    public ResponseEntity<ApiResponse<BulkRegisterResponseDto>> bulkRegister(@RequestParam("file") MultipartFile file) {
-//        ApiResponse<BulkRegisterResponseDto> reportInfo = authService.registerUsersInBatchAndSaveReport(file);
-//        return buildResponse(reportInfo);
-//    }
-
     @PostMapping(UrlAuthPaths.BULK_REGISTER)
     public ResponseEntity<ApiResponse<BulkRegisterResponseDto>> bulkRegister(@RequestParam("file") MultipartFile file) throws JobExecutionException, IOException {
-        System.out.println(file.getOriginalFilename());
-        ApiResponse<BulkRegisterResponseDto> response = authService.launchBatchJob(file);
+        ApiResponse<BulkRegisterResponseDto> response = authService.bulkRegister(file);
         return buildResponse(response);
     }
 

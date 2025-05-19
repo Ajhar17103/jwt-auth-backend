@@ -316,7 +316,7 @@ public class AuthService {
         }
     }
 
-    public ApiResponse<BulkRegisterResponseDto> launchBatchJob(MultipartFile file) throws IOException, JobExecutionException {
+    public ApiResponse<BulkRegisterResponseDto> bulkRegister(MultipartFile file) throws IOException, JobExecutionException {
         String tempFilePath = System.getProperty("java.io.tmpdir") + "/bulk_users_" + System.currentTimeMillis() + ".xlsx";
         Files.copy(file.getInputStream(), Paths.get(tempFilePath));
 
