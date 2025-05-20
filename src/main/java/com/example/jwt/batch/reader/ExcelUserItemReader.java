@@ -2,6 +2,7 @@ package com.example.jwt.batch.reader;
 
 import com.example.jwt.entity.Users;
 import com.example.jwt.repository.UsersRepo;
+import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -21,6 +22,7 @@ public class ExcelUserItemReader implements ItemReader<Users>, ItemStream {
 
     private Iterator<Row> rowIterator;
     private Set<String> existingEmails;
+    private Set<String> seenEmailsInExcel; // Track duplicates within Excel
     private Workbook workbook;
     private final UsersRepo usersRepo;
     private final String filePath;
@@ -43,44 +45,55 @@ public class ExcelUserItemReader implements ItemReader<Users>, ItemStream {
             rowIterator.next(); // skip header
             currentRowNum++;
         }
+
         existingEmails = new HashSet<>(usersRepo.findAllEmails());
+        seenEmailsInExcel = new HashSet<>();
     }
 
     @Override
     public Users read() throws IOException {
         if (workbook == null) init();
-        if (rowIterator == null || !rowIterator.hasNext()) return null;
+        if (rowIterator == null) return null;
 
-        Row row = rowIterator.next();
-        currentRowNum++;
+        while (rowIterator.hasNext()) {
+            Row row = rowIterator.next();
+            currentRowNum++;
 
-        String name = getCellValue(row.getCell(0));
-        String email = getCellValue(row.getCell(1));
-        String role = getCellValue(row.getCell(2));
-        String password = getCellValue(row.getCell(3));
+            String name = getCellValue(row.getCell(0));
+            String email = getCellValue(row.getCell(1));
+            String role = getCellValue(row.getCell(2));
+            String password = getCellValue(row.getCell(3));
 
-        if (existingEmails.contains(email)) {
-            log.warn("Skipping duplicate email: {}", email);
-            return read(); // skip and read next
-        } else {
-            existingEmails.add(email);
+            if (existingEmails.contains(email)) {
+                log.warn("Skipping duplicate email (DB): {}", email);
+                continue;
+            }
+
+            if (seenEmailsInExcel.contains(email)) {
+                log.warn("Skipping duplicate email (Excel): {}", email);
+                continue;
+            }
+
+            seenEmailsInExcel.add(email);
+
+            Users user = new Users();
+            user.setName(name);
+            user.setEmail(email);
+            user.setRole(role);
+            user.setPassword(password);
+            return user;
         }
 
-        Users user = new Users();
-        user.setName(name);
-        user.setEmail(email);
-        user.setRole(role);
-        user.setPassword(password); // handle encoding in processor
-        return user;
+        return null;
     }
 
     private String getCellValue(Cell cell) {
         if (cell == null) return "";
-        switch (cell.getCellType()) {
-            case STRING: return cell.getStringCellValue().trim();
-            case NUMERIC: return String.valueOf(cell.getNumericCellValue());
-            default: return cell.toString().trim();
-        }
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue().trim();
+            case NUMERIC -> String.valueOf(cell.getNumericCellValue());
+            default -> cell.toString().trim();
+        };
     }
 
     @Override
@@ -113,5 +126,10 @@ public class ExcelUserItemReader implements ItemReader<Users>, ItemStream {
                 throw new ItemStreamException("Failed to close workbook", e);
             }
         }
+    }
+
+    @PreDestroy
+    public void preDestroy() {
+        close();
     }
 }

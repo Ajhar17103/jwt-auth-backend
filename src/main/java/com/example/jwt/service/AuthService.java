@@ -332,12 +332,12 @@ public class AuthService {
 
         return ApiResponse.<BulkRegisterResponseDto>builder()
                 .statusCode(200)
-                .message("Batch job completed")
-                .data(BulkRegisterResponseDto.builder()
-                        .successCount(success)
-                        .failureCount(failure)
-                        .reportDownloadUrl("TBD") // implement if you still want to create report
-                        .build())
+                .message("Batch job accepted. Processing has started and may take a few moments.")
+//                .data(BulkRegisterResponseDto.builder()
+//                        .successCount(success)
+//                        .failureCount(failure)
+//                        .reportDownloadUrl("TBD") // implement if you still want to create report
+//                        .build())
                 .build();
     }
 

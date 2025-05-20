@@ -39,21 +39,21 @@ public class BatchConfig {
         return new ExcelUserItemReader(filePath, usersRepo);
     }
 
-//    @Bean
-//    public TaskExecutor taskExecutor() {
-//        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-//        executor.setCorePoolSize(4);       // Tune based on your CPU cores
-//        executor.setMaxPoolSize(8);
-//        executor.setQueueCapacity(100);
-//        executor.setThreadNamePrefix("Batch-");
-//        executor.initialize();
-//        return executor;
-//    }
+    @Bean
+    public TaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(4);
+        executor.setMaxPoolSize(8);
+        executor.setQueueCapacity(100);
+        executor.setThreadNamePrefix("Batch-");
+        executor.initialize();
+        return executor;
+    }
 
     @Bean
     public Step step1(ExcelUserItemReader reader) {
         return new StepBuilder("step1", jobRepository)
-                .<Users, Users>chunk(10, transactionManager)
+                .<Users, Users>chunk(50, transactionManager)
                 .reader(reader)
                 .processor(processor)
                 .writer(writer)
