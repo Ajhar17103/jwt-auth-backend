@@ -126,7 +126,6 @@ public class SecurityConfig {
                         oauthToken.getName()
                 );
         String oAuthAccessToken=client.getAccessToken().getTokenValue();
-//        String oAuthRefreshToekn=client.getRefreshToken().getTokenValue();
 
         UserDetails user = usersDetailService.loadUserByUsername(email);
 
