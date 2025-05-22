@@ -24,12 +24,9 @@ import com.example.jwt.repository.UsersRepo;
 import com.example.jwt.utils.JWTUtils;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.persistence.EntityNotFoundException;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
+import org.springframework.batch.item.ExecutionContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -38,8 +35,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import static com.example.jwt.utils.ExcelUtils.createSheet;
-import static com.example.jwt.utils.ExcelUtils.getCellValue;
 
 @Service
 public class AuthService {
@@ -119,11 +114,11 @@ public class AuthService {
             throw new InactiveUserException("Your account is deactivated. Please contact support.");
         }
 
-        String jwt = jwtUtils.generateToken(user);
+        String accessToken = jwtUtils.generateToken(user);
         String refreshToken = jwtUtils.generateRefreshToken(new HashMap<>(), user);
 
         LoginResponseDto responseData = loginMapper.toResponseDto(user);
-        responseData.setToken(jwt);
+        responseData.setToken(accessToken);
         responseData.setRefreshToken(refreshToken);
 
         return ApiResponse.<LoginResponseDto>builder()
@@ -216,106 +211,6 @@ public class AuthService {
         }
     }
 
-    public ApiResponse<BulkRegisterResponseDto> registerUsersInBatchAndSaveReport(MultipartFile file) {
-        List<String[]> resultRows = new ArrayList<>();
-
-        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
-            Sheet sheet = workbook.getSheetAt(0);
-            int batchSize = 1000;
-            List<Users> batch = new ArrayList<>(batchSize);
-
-            Set<String> existingEmails = usersRepo.findAllEmails();
-            int successCount = 0;
-            int failureCount = 0;
-
-            for (Row row : sheet) {
-                if (row.getRowNum() == 0) continue;
-
-                String name = getCellValue(row.getCell(0));
-                String email = getCellValue(row.getCell(1));
-                String role = getCellValue(row.getCell(2));
-                String password = getCellValue(row.getCell(3));
-
-                try {
-                    StringBuilder errorMessage = new StringBuilder();
-
-//                    if (existingEmails.contains(email)) {
-//                        failureCount++;
-//                        errorMessage.append("Duplicate email; ");
-//                    }
-//
-//                    if (!isValidPassword(password)) {
-//                        failureCount++;
-//                        errorMessage.append("Invalid password format; ");
-//                    }
-//
-//                    if (!isValidEmail(email)) {
-//                        failureCount++;
-//                        errorMessage.append("Invalid email format; ");
-//                    }
-                    if (!errorMessage.isEmpty()) {
-                        resultRows.add(new String[]{name, email, role, "Failed", errorMessage.toString()});
-                        continue;
-                    }
-                    Users user = new Users();
-                    user.setName(name);
-                    user.setEmail(email);
-                    user.setRole(role);
-                    user.setPassword(passwordEncoder.encode(password));
-                    user.setActive(true);
-                    user.setIs_deleted(0);
-
-                    batch.add(user);
-                    existingEmails.add(email);
-                    resultRows.add(new String[]{name, email, role, "Success", ""});
-                    successCount++;
-
-                    if (batch.size() == batchSize) {
-                        usersRepo.saveAll(batch);
-                        batch.clear();
-                    }
-
-                } catch (Exception e) {
-                    failureCount++;
-                    resultRows.add(new String[]{name, email, role, "Failed", "Error: " + e.getMessage()});
-                }
-            }
-
-            if (!batch.isEmpty()) {
-                usersRepo.saveAll(batch);
-            }
-
-            Workbook resultWorkbook = new XSSFWorkbook();
-           createSheet(resultWorkbook, "Registration Report",
-                    new String[]{"Name", "Email", "Role", "Status", "Remarks"}, resultRows);
-
-            String filename = "bulk-register-report-" + System.currentTimeMillis() + ".xlsx";
-            Path path = Paths.get(System.getProperty("java.io.tmpdir"), filename);
-            try (FileOutputStream fos = new FileOutputStream(path.toFile())) {
-                resultWorkbook.write(fos);
-            }
-            resultWorkbook.close();
-
-            BulkRegisterResponseDto dto = BulkRegisterResponseDto.builder()
-                    .successCount(successCount)
-                    .failureCount(failureCount)
-                    .reportDownloadUrl(filename)
-                    .build();
-
-            return ApiResponse.<BulkRegisterResponseDto>builder()
-                    .statusCode(200)
-                    .message("Bulk registration completed.")
-                    .data(dto)
-                    .build();
-
-        } catch (Exception e) {
-            return ApiResponse.<BulkRegisterResponseDto>builder()
-                    .statusCode(500)
-                    .message("Internal server error: " + e.getMessage())
-                    .build();
-        }
-    }
-
     public ApiResponse<BulkRegisterResponseDto> bulkRegister(MultipartFile file) throws IOException, JobExecutionException {
         String tempFilePath = System.getProperty("java.io.tmpdir") + "/bulk_users_" + System.currentTimeMillis() + ".xlsx";
         Files.copy(file.getInputStream(), Paths.get(tempFilePath));
@@ -327,17 +222,26 @@ public class AuthService {
 
         JobExecution execution = jobLauncher.run(userImportJob, parameters);
 
-        int success = (int) execution.getStepExecutions().stream().mapToLong(StepExecution::getWriteCount).sum();
-        int failure = (int) execution.getStepExecutions().stream().mapToLong(StepExecution::getSkipCount).sum();
+        while (execution.isRunning()) {
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Interrupted while waiting for batch job to complete");
+            }
+        }
+
+        ExecutionContext context = execution.getExecutionContext();
+        int success = context.getInt("successCount", 0);
+        int failure = context.getInt("failureCount", 0);
 
         return ApiResponse.<BulkRegisterResponseDto>builder()
                 .statusCode(200)
-                .message("Batch job accepted. Processing has started and may take a few moments.")
-//                .data(BulkRegisterResponseDto.builder()
-//                        .successCount(success)
-//                        .failureCount(failure)
-//                        .reportDownloadUrl("TBD") // implement if you still want to create report
-//                        .build())
+                .message("Batch job completed.")
+                .data(BulkRegisterResponseDto.builder()
+                        .successCount(success)
+                        .failureCount(failure)
+                        .build())
                 .build();
     }
 

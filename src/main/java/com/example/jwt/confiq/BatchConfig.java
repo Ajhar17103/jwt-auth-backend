@@ -1,5 +1,6 @@
 package com.example.jwt.confiq;
 
+import com.example.jwt.batch.listener.BulkRegisterJobListener;
 import com.example.jwt.batch.processor.UserItemProcessor;
 import com.example.jwt.batch.reader.ExcelUserItemReader;
 import com.example.jwt.batch.writer.UserItemWriter;
@@ -64,9 +65,10 @@ public class BatchConfig {
     }
 
     @Bean
-    public Job userImportJob(Step step1) {
+    public Job userImportJob(Step step1, BulkRegisterJobListener listener) {
         return new JobBuilder("userImportJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
+                .listener(listener)
                 .start(step1)
                 .build();
     }

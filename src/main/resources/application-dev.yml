@@ -1,4 +1,21 @@
 spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: 770411863454-dl1kk5002dhu81mgmah8odr3qb2sjje1.apps.googleusercontent.com
+            client-secret: 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
+            redirect-uri: http://localhost:8086/api/v1/auth/oauth2/code/google
+            scope:
+              - email
+              - profile
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+
   datasource:
     url: jdbc:mysql://localhost:3306/jwt
     username: root

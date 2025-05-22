@@ -1,5 +1,6 @@
 package com.example.jwt.service;
 
+import com.example.jwt.entity.Users;
 import com.example.jwt.repository.UsersRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,6 +13,7 @@ public class UsersDetailService implements UserDetailsService {
 
     private final UsersRepo usersRepo;
 
+    @Autowired
     public UsersDetailService(UsersRepo usersRepo) {
         this.usersRepo = usersRepo;
     }
